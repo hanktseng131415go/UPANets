@@ -31,6 +31,10 @@ In this project, we implement UPANets in `./models/upanets.py`. The simple usage
 
 `python main.py`
 
+If you install the needed packages through `pipenv`, please use:
+
+`pipenv run python main.py`
+
 
 
 
