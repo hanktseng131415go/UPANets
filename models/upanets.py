@@ -1,6 +1,7 @@
-'''UPANets in PyTorch.
+'''
+UPANets in PyTorch.
 
-Processing model in cifar10 by Ching-Hsun Tseng and Jia-Nan Feng
+by Ching-Hsun Tseng and Jia-Nan Feng
 '''
 #%%
 import torch
@@ -49,26 +50,55 @@ class upa_block(nn.Module):
 class CPA(nn.Module):
     '''Channel Pixel Attention'''
     
-    def __init__(self, in_dim, dim, stride=1, same=False):
+#      *same=False:
+#       This scenario can be easily embedded after any CNNs, if size is same.
+#        x (OG) ---------------
+#        |                    |
+#        sc_x (from CNNs)     CPA(x)
+#        |                    |
+#        out + <---------------
+#        
+#      *same=True:
+#       This can be embedded after the CNNs where the size are different.
+#        x (OG) ---------------
+#        |                    |
+#        sc_x (from CNNs)     |
+#        |                    CPA(x)
+#        CPA(sc_x)            |
+#        |                    |
+#        out + <---------------
+#           
+#      *sc_x=False
+#       This operation can be seen a channel embedding with CPA
+#       EX: x (3, 32, 32) => (16, 32, 32)
+#        x (OG) 
+#        |      
+#        CPA(x)
+#        |    
+#        out 
+
+    def __init__(self, in_dim, dim, stride=1, same=False, sc_x=True):
         
         super(CPA, self).__init__()
             
         self.dim = dim
         self.stride = stride
         self.same = same
+        self.sc_x = sc_x
         
         self.cp_ffc = nn.Linear(in_dim, dim)
         self.bn = nn.BatchNorm2d(dim)
 
         if self.stride == 2 or self.same == True:
-            self.cp_ffc_sc = nn.Linear(in_dim, dim)
-            self.bn_sc = nn.BatchNorm2d(dim)
+            if sc_x == True:
+                self.cp_ffc_sc = nn.Linear(in_dim, dim)
+                self.bn_sc = nn.BatchNorm2d(dim)
             
             if self.stride == 2:
                 self.avgpool = nn.AvgPool2d(2)
             
-    def forward(self, x, sc_x):        
-        
+    def forward(self, x, sc_x):    
+       
         _, c, w, h = x.shape
         out = rearrange(x, 'b c w h -> b w h c', c=c, w=w, h=h)
         out = self.cp_ffc(out)
@@ -76,20 +106,23 @@ class CPA(nn.Module):
         out = self.bn(out)  
        
         if out.shape == sc_x.shape:
-            out = sc_x + out
+            if self.sc_x == True:
+                out = sc_x + out
             out = F.layer_norm(out, out.size()[1:])
             
         else:
             out = F.layer_norm(out, out.size()[1:])
-            x = sc_x
+            if self.sc_x == True:
+                x = sc_x
             
         if self.stride == 2 or self.same == True:
-            _, c, w, h = x.shape
-            x = rearrange(x, 'b c w h -> b w h c', c=c, w=w, h=h)
-            x = self.cp_ffc_sc(x)
-            x = rearrange(x, 'b w h c-> b c w h', c=self.dim, w=w, h=h)
-            x = self.bn_sc(x)
-            out = out + x 
+            if self.sc_x == True:
+                _, c, w, h = x.shape
+                x = rearrange(x, 'b c w h -> b w h c', c=c, w=w, h=h)
+                x = self.cp_ffc_sc(x)
+                x = rearrange(x, 'b w h c-> b c w h', c=self.dim, w=w, h=h)
+                x = self.bn_sc(x)
+                out = out + x 
             
             if self.same == True:
                 return out
@@ -97,6 +130,7 @@ class CPA(nn.Module):
             out = self.avgpool(out)
            
         return out
+
    
 class SPA(nn.Module):
     '''Spatial Pixel Attention'''
@@ -108,7 +142,6 @@ class SPA(nn.Module):
         self.sp_ffc = nn.Sequential(
             nn.Linear(img**2, out**2)
             )   
-#        self.sp_ffc = nn.Conv2d(img**2, out**2, kernel_size=1, bias=False)
         
     def forward(self, x):
         
@@ -215,7 +248,7 @@ class upanets(nn.Module):
         out = torch.cat([out4, out3, out2, out1, out0], 1)
         
         out = out.view(out.size(0), -1)
-        out = self.bn(out)
+        out = self.bn(out) # please exclude when using the test function
         out = self.linear(out)
 
         return out
