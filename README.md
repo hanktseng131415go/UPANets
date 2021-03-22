@@ -35,8 +35,54 @@ If you install the needed packages through `pipenv`, please use:
 
 `pipenv run python main.py`
 
+## Channel Pixel Attention
+The operation can be simply embedded with CNNs. 
+![](./materials/CPA_in_UPABlocks.png)
+Apart from the place in the above picture. A further data flow explanation can be seen in `./models/upanets,.py`'s CPA function:
 
+```      
+*same=False:
+This scenario can be easily embedded after any CNNs, if size is same.
+x (OG) ---------------
+|                    |
+sc_x (from CNNs)     CPA(x)
+|                    |
+out + <---------------
+    
+*same=True:
+This can be embedded after the CNNs where the size are different.
+x (OG) ---------------
+|                    |
+sc_x (from CNNs)     |
+|                    CPA(x)
+CPA(sc_x)            |
+|                    |
+out + <---------------
+   
+*sc_x=False
+This operation can be seen a channel embedding with CPA
+EX: x (3, 32, 32) => (16, 32, 32)
+x (OG) 
+|      
+CPA(x)
+|    
+out 
+```
+Please feel free to add it after any CNNs. 
+Be aware if `sc_x=False`, it is not matter what is the value of input sc_x as it will be ignored eventually. For example:
 
+```
+def __init___:
+...
+	cpa = CPA(16, 32, sc_x=False)
+...
 
+def forward(x):
+
+	out = CNN(x)
+	out = cpa(out, out) # <--- it is acceptable 
+
+```
+* Please don't expect that applying CPA as an embedding layer will increase the performance surely but it could offer another option of embedding with global information considering. Further researches about whether placing an embed-CPA in a propoer place to raise performance are needed
 
 
