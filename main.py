@@ -51,7 +51,7 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Data
 print('==> Preparing data..')
-
+img_size = 32 # default image size for Cifar-10
 if args.datasets == 'cifar_10' or args.datasets == 'cifar_100':
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -131,7 +131,7 @@ optimizer = optim.SGD(net.parameters(), lr=0.1,
                       momentum=0.9, weight_decay=0.0005)
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-summary(net, (3, 32, 32))
+summary(net, (3, img_size, img_size))
 #%%
 # Training
 def train(epoch):
