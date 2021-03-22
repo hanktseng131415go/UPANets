@@ -38,6 +38,7 @@ If you install the needed packages through `pipenv`, please use:
 ## Channel Pixel Attention
 The operation can be simply embedded with CNNs. 
 ![](./materials/CPA_in_UPABlocks.png)
+
 Apart from the place in the above picture. A further data flow explanation can be seen in `./models/upanets,.py`'s CPA function:
 
 ```      
